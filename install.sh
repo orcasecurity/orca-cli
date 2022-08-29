@@ -18,7 +18,7 @@ execute() {
   hash_sha256_verify "${tmpdir}/${TARBALL}" "${tmpdir}/${CHECKSUM}"
   srcdir="${tmpdir}"
   (cd "${tmpdir}" && untar "${TARBALL}")
-  install -d -m 775 "${BINDIR}"
+  test ! -d "${BINDIR}" && install -d "${BINDIR}"
   binexe="orca-cli"
   if [ "$OS" = "windows" ]; then
     binexe="${binexe}.exe"
