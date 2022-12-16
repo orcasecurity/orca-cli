@@ -26,7 +26,8 @@ execute() {
   install "${srcdir}/${binexe}" "${BINDIR}/" 2> /dev/null || sudo install "${srcdir}/${binexe}" "${BINDIR}/"
   log_info "Installed ${BINDIR}/${binexe}"
   if [ "$ORIG_PLATFORM" = "darwin/arm64" ]; then
-    log_info "M1 CPU requires Rosseta 2, make sure you have, or install it by running: '/usr/sbin/softwareupdate --install-rosetta'"
+    # test if Rosetta2 is present
+    /usr/bin/pgrep -q oahd || log_info "M1 CPU requires Rosetta 2, which appears to be missing.  Install it by running: '/usr/sbin/softwareupdate --install-rosetta'"
   fi
 
 }
