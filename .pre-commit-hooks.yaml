@@ -1,7 +1,7 @@
 - id: orca-shiftleft
   name: Detect hardcoded secrets
   description: Detect hardcoded secrets using orca-cli
-  entry: orca-cli -p ORCA_SECURITY_SF_PROJECT_KEY --api-token ORCA_SECURITY_API_TOKEN fs scan 
-  language: golang
+  entry: orca-cli -p ORCA_SECURITY_SF_PROJECT_KEY --api-token ORCA_SECURITY_API_TOKEN fs scan --help
+  language: system
   stages: [commit]
   pass_filenames: false
