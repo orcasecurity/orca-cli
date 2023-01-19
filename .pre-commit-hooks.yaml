@@ -1,15 +1,15 @@
-- id: orca-shiftleft
+- id: orca-cli-secrets
   name: Orca Security - Secret Detection
   description: Detect hardcoded secrets using orca-cli
-  entry: orca-cli -p $ORCA_PROJECT_KEY --silent --api-token $ORCA_SECURITY_API_TOKEN fs scan ./ --security-checks secret
+  entry: orca-cli --silent --skip-scan-log -p secret-orca-demo fs scan ./ --pre-commit --security-checks secret
   language: system
   stages: [commit]
   pass_filenames: false
 
-- id: docker-orca-shiftleft
+- id: docker-orca-cli-secrets"
   name: Orca Security - Secret Detection
   description: Detect hardcoded secrets using orca-cli
-  entry: -e ORCA_PROJECT_KEY -e ORCA_SECURITY_API_TOKEN --rm -v ./:/scan_path  ghcr.io/orcasecurity/orca-cli:latest -p $ORCA_SECURITY_API_TOKEN --silent fs scan ./scan_path --security-checks secret
+  entry: -e ORCA_SECURITY_PROJECT_KEY -e ORCA_SECURITY_API_TOKEN ghcr.io/orcasecurity/orca-cli:latest --silent --pre-commit --skip-scan-log -p secret-orca-demo fs scan /src --security-checks secret
   language: docker_image
   stages: [commit]
   pass_filenames: false
