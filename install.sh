@@ -402,7 +402,7 @@ ORIG_PLATFORM="$PLATFORM"
 GITHUB_DOWNLOAD=https://github.com/orcasecurity/orca-cli/releases/download
 
 
-function main(){
+main(){
   #Validate os and architecture
   os_check "$OS"
   arch_check "$ARCH"
