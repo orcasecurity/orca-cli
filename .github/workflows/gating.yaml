@@ -1,4 +1,4 @@
-name: Orca CLI Gating CI
+name: Orca Installation Script Gating CI
 on:
   pull_request:
   workflow_dispatch:
