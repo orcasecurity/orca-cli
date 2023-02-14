@@ -1,0 +1,32 @@
+name: Orca Installation Script Gating CI
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  run_bin_downloader_script:
+    name: run_bin_downloader_script
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      - name: Install zshell
+        run: sudo apt install -y zsh
+      - shell: bash
+        run: |
+          ps -p $$
+          cat ./install.sh | bash -s
+          orca-cli -h
+          rm -rf /usr/local/bin/orca-cli
+      - shell: sh
+        run: |
+          ps -p $$
+          cat ./install.sh | bash -s
+          orca-cli -h
+          rm -rf /usr/local/bin/orca-cli
+      - shell: zsh {0}
+        run: |
+          ps -p $$
+          cat ./install.sh | bash -s
+          orca-cli -h
+          rm -rf /usr/local/bin/orca-cli
