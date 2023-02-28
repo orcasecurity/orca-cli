@@ -256,7 +256,7 @@ usage() {
 $this: Orca Security Cli binary downloader
 
 Usage: $this [-b] bin_dir [-d] [tag]	[-x]
-  -b set bin_dir or installation directory, Default: /usr/local/bin
+  -b set bin_dir or installation directory, Default: /usr/local/bin or current directory for Windows.
   -d Turn on debug logging
    [tag] A tag from https://github.com/orcasecurity/orca-cli/releases
          In case a tag is missing, latest tag will be used.
@@ -270,7 +270,11 @@ parse_args() {
   # BINDIR default value is /usr/local/bin unless set be ENV
   # or over-ridden by flag below
 
-  BINDIR=${BINDIR:-/usr/local/bin}
+  if [ "$OS" = "windows" ]; then
+	  BINDIR=${BINDIR:-.}
+  else
+          BINDIR=${BINDIR:-/usr/local/bin}
+  fi
   while getopts "b:dh?x" arg; do
     case "$arg" in
       b) BINDIR="$OPTARG" ;;
@@ -363,6 +367,8 @@ is_supported_platform() {
     darwin/arm64) supported=0 ;;
     linux/amd64) supported=0 ;;
     linux/arm64) supported=0 ;;
+    windows/arm64) supported=0 ;;
+    windows/amd64) supported=0 ;;
   esac
 
   return $supported
