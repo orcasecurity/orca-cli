@@ -5,11 +5,6 @@
 # as if by executing the exit special built-in utility with no arguments
 set -e
 
-# Prefix used for logging
-log_prefix() {
-	echo "$PREFIX"
-}
-
 execute() {
   tmpdir=$(mktmpdir)
   log_debug "downloading files into ${tmpdir}"
@@ -198,9 +193,6 @@ echoerr() {
   echo "$@" 1>&2
 }
 
-log_prefix() {
-  echo "$0"
-}
 _logp=6
 
 log_set_priority() {
@@ -231,22 +223,22 @@ log_tag() {
 
 log_debug() {
   log_priority 7 || return 0
-  echoerr "$(log_prefix)" "$(log_tag 7)" "$@"
+  echoerr "$(log_tag 7)" "$@"
 }
 
 log_info() {
   log_priority 6 || return 0
-  echoerr "$(log_prefix)" "$(log_tag 6)" "$@"
+  echoerr "$(log_tag 6)" "$@"
 }
 
 log_err() {
   log_priority 3 || return 0
-  echoerr "$(log_prefix)" "$(log_tag 3)" "$@"
+  echoerr "$(log_tag 3)" "$@"
 }
 
 log_crit() {
   log_priority 2 || return 0
-  echoerr "$(log_prefix)" "$(log_tag 2)" "$@"
+  echoerr "$(log_tag 2)" "$@"
 }
 
 #-----------------------ARGS & Usage---------------------------------------
