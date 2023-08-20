@@ -1,7 +1,7 @@
 - id: orca-cli-secrets
   name: Orca Security - Secret Detection
   description: Detect hardcoded secrets using orca-cli
-  entry: orca-cli --silent --skip-scan-log secrets pre-commit scan
+  entry: orca-cli --silent secrets pre-commit scan
   language: system
   stages: [commit]
   pass_filenames: false
@@ -9,7 +9,7 @@
 - id: docker-orca-cli-secrets
   name: Orca Security - Secret Detection
   description: Detect hardcoded secrets using orca-cli
-  entry: -e ORCA_SECURITY_PROJECT_KEY -e ORCA_SECURITY_API_TOKEN ghcr.io/orcasecurity/orca-cli:latest --silent --skip-scan-log secrets pre-commit scan --path /src
+  entry: -e ORCA_SECURITY_PROJECT_KEY -e ORCA_SECURITY_API_TOKEN ghcr.io/orcasecurity/orca-cli:latest --silent secrets pre-commit scan --path /src
   language: docker_image
   stages: [commit]
   pass_filenames: false
