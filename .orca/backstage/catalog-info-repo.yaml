@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: catalog-base-locations-orca-cli
+  labels:
+    repository: orca-cli
+  annotations:
+    github.com/project-slug: orcasecurity/orca-cli
+spec:
+  presence: optional
+  targets:
+    - ./repository-info.yaml
+    - ./catalog-component-locations.yaml
