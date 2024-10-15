@@ -30,3 +30,4 @@ jobs:
           cat ./install.sh | bash -s
           orca-cli -h
           rm -rf /usr/local/bin/orca-cli
+# TODO: Need to fix the workflow
