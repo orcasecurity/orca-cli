@@ -9,7 +9,7 @@ jobs:
     steps:
       # Checkout your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install zshell
         run: sudo apt install -y zsh
       - shell: bash
