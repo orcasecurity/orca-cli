@@ -277,7 +277,6 @@ parse_args() {
           BINDIR=${BINDIR:-/usr/local/bin}
   fi
   while getopts "b:dh?xk" arg; do
-    log_info "checking $arg"
     case "$arg" in
       b) BINDIR="$OPTARG" ;;
       d) log_set_priority 10 ;;
