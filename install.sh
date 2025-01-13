@@ -99,10 +99,13 @@ http_download_curl() {
   local_file=$1
   source_url=$2
   header=$3
+  insecure_opt=""
+  [ "$INSECURE" = "1" ] && insecure_opt="-k"
+
   if [ -z "$header" ]; then
-    code=$(curl -w '%{http_code}' -sL -o "$local_file" "$source_url")
+    code=$(curl $insecure_opt -w '%{http_code}' -sL -o "$local_file" "$source_url")
   else
-    code=$(curl -w '%{http_code}' -sL -H "$header" -o "$local_file" "$source_url")
+    code=$(curl $insecure_opt -w '%{http_code}' -sL -H "$header" -o "$local_file" "$source_url")
   fi
   if [ "$code" != "200" ]; then
     log_debug "http_download_curl received HTTP status $code"
@@ -115,10 +118,13 @@ http_download_wget() {
   local_file=$1
   source_url=$2
   header=$3
+  insecure_opt=""
+  [ "$INSECURE" = "1" ] && insecure_opt="--no-check-certificate"
+
   if [ -z "$header" ]; then
-    wget -q -O "$local_file" "$source_url"
+    wget $insecure_opt -q -O "$local_file" "$source_url"
   else
-    wget -q --header "$header" -O "$local_file" "$source_url"
+    wget $insecure_opt -q --header "$header" -O "$local_file" "$source_url"
   fi
 }
 
@@ -253,10 +259,13 @@ Usage: $this [-b] bin_dir [-d] [tag]	[-x]
    [tag] A tag from https://github.com/orcasecurity/orca-cli/releases
          In case a tag is missing, latest tag will be used.
   -x enables a mode of the shell where all executed commands are printed to the terminal.
+  -k Skip SSL certificate verification when downloading
 
 EOF
   exit 2
 }
+
+INSECURE=0
 
 parse_args() {
   # BINDIR default value is /usr/local/bin unless set be ENV
@@ -267,12 +276,13 @@ parse_args() {
   else
           BINDIR=${BINDIR:-/usr/local/bin}
   fi
-  while getopts "b:dh?x" arg; do
+  while getopts "b:dh?xk" arg; do
     case "$arg" in
       b) BINDIR="$OPTARG" ;;
       d) log_set_priority 10 ;;
       h | \?) usage "$0" ;;
       x) set -x ;;
+      k) INSECURE=1 ;;
     esac
   done
 
@@ -421,4 +431,3 @@ main(){
 }
 
 main "${@}"
-
