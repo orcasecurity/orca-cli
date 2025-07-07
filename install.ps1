@@ -1,4 +1,4 @@
-param (
+ param (
     [string]$tag,
     [string]$binDir = ".",
     [switch]$insecure
@@ -34,6 +34,42 @@ function Invoke-WebRequestInsecure {
         Invoke-WebRequest -Uri $Uri -OutFile $OutFile -Method $Method -UseBasicParsing
     } else {
         Invoke-RestMethod -Uri $Uri -Method $Method -UseBasicParsing
+    }
+}
+
+function Get-FileHashCompat {
+    param(
+        [string]$Path,
+        [string]$Algorithm = "SHA256"
+    )
+    
+    # Check if Get-FileHash is available (PowerShell 4.0+)
+    if (Get-Command Get-FileHash -ErrorAction SilentlyContinue) {
+        Write-Host "Using built-in Get-FileHash cmdlet for hash verification" -ForegroundColor Green
+        return Get-FileHash -Path $Path -Algorithm $Algorithm
+    }
+    
+    # Fallback for older PowerShell versions
+    Write-Host "Get-FileHash not available, using .NET fallback for hash calculation" -ForegroundColor Yellow
+    
+    try {
+        $hasher = [System.Security.Cryptography.HashAlgorithm]::Create($Algorithm)
+        $fileStream = [System.IO.File]::OpenRead($Path)
+        $hashBytes = $hasher.ComputeHash($fileStream)
+        $fileStream.Close()
+        $hasher.Dispose()
+        
+        $hashString = [System.BitConverter]::ToString($hashBytes).Replace("-", "")
+        
+        # Return object similar to Get-FileHash
+        return [PSCustomObject]@{
+            Algorithm = $Algorithm
+            Hash = $hashString
+            Path = $Path
+        }
+    } catch {
+        Write-Error "Failed to calculate hash: $_"
+        throw
     }
 }
 
@@ -98,8 +134,13 @@ function Download-InstallOrcaCLI {
         return
     }
 
-    $hash = Get-FileHash -Path "$($tempDir)\orca-cli_windows.zip" -Algorithm SHA256
+    # Use compatible hash function
+    Write-Output "Verifying SHA256 checksum..."
+    $hash = Get-FileHashCompat -Path "$($tempDir)\orca-cli_windows.zip" -Algorithm SHA256
+    Write-Output "File hash: $($hash.Hash)"
+    
     if ((Get-Content "$($tempDir)\orca-cli_windows_checksums.txt") -match $hash.Hash) {
+        Write-Output "SHA256 verification successful"
         Expand-Archive -Path "$($tempDir)\orca-cli_windows.zip" -DestinationPath $tempDir
         $binexe = "orca-cli.exe"
         Copy-Item -Path "$($tempDir)\$binexe" -Destination $binDir -Force
@@ -108,6 +149,12 @@ function Download-InstallOrcaCLI {
         Write-Error "SHA256 verification failed for $($tempDir)\orca-cli_windows.zip"
     }
     Remove-Item -Path $tempDir -Force -Recurse
+}
+
+# Check PowerShell version and warn if too old
+Write-Output "PowerShell Version: $($PSVersionTable.PSVersion)"
+if ($PSVersionTable.PSVersion.Major -lt 3) {
+    Write-Warning "PowerShell version is quite old. Some features may not work properly."
 }
 
 if (-not $tag) {
