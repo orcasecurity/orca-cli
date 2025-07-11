@@ -24,7 +24,7 @@ execute() {
     # test if Rosetta2 is present
     /usr/bin/pgrep -q oahd || log_info "M1 CPU requires Rosetta 2, which appears to be missing.  Install it by running: '/usr/sbin/softwareupdate --install-rosetta'"
   fi
-
+  rm -rf "${tmpdir}"
 }
 
 
