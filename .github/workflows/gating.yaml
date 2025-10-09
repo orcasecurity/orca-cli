@@ -44,11 +44,11 @@ jobs:
           $InstallDir = "$env:TEMP\orca_cli_test_bin"
           New-Item -ItemType Directory -Path $InstallDir -ErrorAction Stop
           
-          Write-Host "Executing install-orca-cli.ps1 with signature verification..."
+          Write-Host "Executing install.ps1 with signature verification..."
 
           # Execute the PowerShell installer script (using a known-good tag for testing)
           # This script will attempt the signed download and verification first, then fallback to checksum if needed.
-          .\install-orca-cli.ps1 -binDir $InstallDir -ErrorAction Stop
+          .\install.ps1 -binDir $InstallDir -ErrorAction Stop
           
           # Verification step: Ensure the executable exists and runs
           $ExePath = Join-Path -Path $InstallDir -ChildPath "orca-cli.exe"
