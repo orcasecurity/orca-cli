@@ -226,7 +226,6 @@ function Test-AuthenticodeSignature {
 
     # --- ATTEMPT 2: Fallback to Checksum Verification (Original Flow) ---
     if (-not $success) {
-        $success = $true
         Write-Output "Attempt 2: Initiating fallback to unsigned binary and SHA256 checksum verification."
         
         $tarballUrlUnsigned = "https://github.com/orcasecurity/orca-cli/releases/download/$tag/orca-cli_$($tag)_windows_$($arch).zip"
@@ -237,7 +236,7 @@ function Test-AuthenticodeSignature {
 
         try {
             Invoke-WebRequestInsecure -Uri $tarballUrlUnsigned -OutFile $tarballFile
-
+            $success = $true
         } catch {
             Write-Error "Failed to download the binary. Please check your internet connection and ensure that the version/tag is correct."
             $success = $false
