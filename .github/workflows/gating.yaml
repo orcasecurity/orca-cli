@@ -48,7 +48,7 @@ jobs:
 
           # Execute the PowerShell installer script (using a known-good tag for testing)
           # This script will attempt the signed download and verification first, then fallback to checksum if needed.
-          .\install.ps1 -binDir $InstallDir -ErrorAction Stop
+          .\install.ps1 -tag 1.94.0 -binDir $InstallDir -ErrorAction Stop
           
           # Verification step: Ensure the executable exists and runs
           $ExePath = Join-Path -Path $InstallDir -ChildPath "orca-cli.exe"
