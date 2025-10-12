@@ -30,3 +30,47 @@ jobs:
           cat ./install.sh | bash -s
           orca-cli -h
           rm -rf /usr/local/bin/orca-cli
+  run_windows_downloader_script:
+    name: Run Windows Downloader Script with Signature Check
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Orca CLI and Verify Signature
+        shell: powershell
+        run: |
+          # Define the target directory for the installation
+          $InstallDir = "$env:TEMP\orca_cli_test_bin"
+          New-Item -ItemType Directory -Path $InstallDir -ErrorAction Stop
+          
+          Write-Host "Executing install.ps1 with signature verification..."
+
+          # Execute the PowerShell installer script (using a known-good tag for testing)
+          # This script will attempt the signed download and verification first, then fallback to checksum if needed.
+          .\install.ps1 -binDir $InstallDir -ErrorAction Stop
+          
+          # Verification step: Ensure the executable exists and runs
+          $ExePath = Join-Path -Path $InstallDir -ChildPath "orca-cli.exe"
+          
+          if (-not (Test-Path $ExePath)) {
+              Write-Error "Orca CLI executable was not found at $ExePath after installation."
+              exit 1
+          }
+
+          Write-Host "Verifying installed binary by running --help..."
+          
+          # Change directory to the installation path and execute the installed binary
+          cd $InstallDir
+          .\orca-cli.exe --help | Out-Host
+          
+      - name: Cleanup Temporary Directory
+        # Ensure cleanup runs even if previous steps fail
+        if: always()
+        shell: powershell
+        run: |
+          $InstallDir = "$env:TEMP\orca_cli_test_bin"
+          if (Test-Path $InstallDir) {
+            Write-Host "Cleaning up test directory $InstallDir"
+            Remove-Item -Path $InstallDir -Recurse -Force -ErrorAction SilentlyContinue
+          }

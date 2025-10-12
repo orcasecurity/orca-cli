@@ -106,50 +106,189 @@ function Get-Architecture {
     }
 }
 
-function Download-InstallOrcaCLI {
+ 
+function Test-AuthenticodeSignature {
+    param(
+        [string]$Path
+    )
+    Write-Output "Verifying Authenticode digital signature on file: '$Path'"
+    
+    if (-not (Test-Path $Path)) {
+        Write-Warning "File not found at '$Path' for signature check."
+        return $false
+    }
+    
+
+    $ExpectedSignerCN = "CN=Orca Security Inc."
+    $ExpectedIssuerCN = "CN=Sectigo Public Code Signing CA"
+
+    
+    try {
+        $signature = Get-AuthenticodeSignature -FilePath $Path -ErrorAction Stop
+        $signerSubject = $signature.SignerCertificate.Subject
+        $signerIssuer = $signature.SignerCertificate.Issuer
+
+        
+        if ($signature.Status -eq "Valid") {
+            # Check 1: Signer Subject (Owner)
+            $isSubjectValid = $signerSubject -like "*$ExpectedSignerCN*"
+            
+            # Check 2: Signer Issuer (CA)
+            # Use -like for flexibility, ensuring the expected CN is part of the full Issuer string
+            $isIssuerValid = $signerIssuer -like "*$ExpectedIssuerCN*"
+            
+            if ($isSubjectValid -and $isIssuerValid) {
+                # Changed Write-Output to Write-Host for colored text
+                Write-Host "Authenticode Signature is VALID and verified to be signed by Orca Security Inc." -ForegroundColor Green
+                Write-Host "Subject: $($signerSubject)" -ForegroundColor DarkGreen
+                Write-Host "Issuer: $($signerIssuer)" -ForegroundColor DarkGreen
+                return $true
+            } else {
+                Write-Warning "Authenticode Signature is VALID but verification FAILED (Owner or Issuer mismatch)."
+                
+                if (-not $isSubjectValid) {
+                    Write-Warning "Owner Check Failed: Expected subject to contain '$ExpectedSignerCN', but found: $($signerSubject)"
+                }
+                if (-not $isIssuerValid) {
+                    Write-Warning "Issuer Check Failed: Expected issuer to contain '$ExpectedIssuerCN', but found: $($signerIssuer)"
+                }
+                return $false
+            }
+        } else {
+            Write-Warning "Authenticode Signature check FAILED: $($signature.Status). $($signature.StatusMessage)"
+            return $false
+        }
+    } catch {
+        Write-Error "An error occurred during signature check. Fallback to checksum is necessary. Error: $($_.Exception.Message)"
+        return $false
+    }
+} 
+
+
+ function Download-InstallOrcaCLI {
     param(
         [string]$tag,
         [string]$binDir
     )
     $arch = Get-Architecture
-    $tarballUrl = "https://github.com/orcasecurity/orca-cli/releases/download/$tag/orca-cli_$($tag)_windows_$arch.zip"
-    $checksumUrl = "https://github.com/orcasecurity/orca-cli/releases/download/$tag/orca-cli_$($tag)_checksums.txt"
-    Write-Output "Downloading orca-cli.exe, version: $($tag)"
-    
     $tempDirName = "orca-cli_temp_" + (Get-Random)
     $tempDir = New-Item -ItemType Directory -Path $env:TEMP -Name $tempDirName | Select-Object -ExpandProperty FullName
     Write-Output "Downloading files into $($tempDir)"
 
-    try {
-        Invoke-WebRequestInsecure -Uri $tarballUrl -OutFile "$($tempDir)\orca-cli_windows.zip"
-    } catch {
-        Write-Error "Failed to download the binary. Please check your internet connection and ensure that the version/tag is correct."
-        return
-    }
+    $zipFileName = "orca-cli_windows.zip"
+    $tarballFile = "$($tempDir)\$zipFileName"
+    $binexe = "orca-cli.exe"
+    # Path to the extracted executable file
+    $extractedExePath = "$($tempDir)\$binexe"
+    
+    $success = $false
+
+    # --- ATTEMPT 1: Signed Binary Download, Extraction, and Authenticode Verification ---
+    $tarballUrlSigned = "https://github.com/orcasecurity/orca-cli/releases/download/$tag/orca-cli_$($tag)_windows_$($arch)_signed.zip"
+    Write-Output "Attempt 1: Trying to download digitally signed binary from: $($tarballUrlSigned)"
     
     try {
-        Invoke-WebRequestInsecure -Uri $checksumUrl -OutFile "$($tempDir)\orca-cli_windows_checksums.txt"
+        # 1. Download Signed File (ZIP)
+        Invoke-WebRequestInsecure -Uri $tarballUrlSigned -OutFile $tarballFile
+        Write-Output "Signed binary ZIP downloaded successfully."
+        
+        # 2. Extract the EXE
+        Expand-Archive -Path $tarballFile -DestinationPath $tempDir -Force
+        Write-Output "ZIP extracted successfully. Checking signature on the executable..."
+
+        # 3. Verify Signature on the *extracted EXE*
+        $signatureValid = Test-AuthenticodeSignature -Path $extractedExePath
+        
+        if ($signatureValid) {
+            # Installation is only performed if the EXE signature is valid
+            Write-Host "Digital signature is valid. Installing Orca CLI..." -ForegroundColor Green
+            Copy-Item -Path $extractedExePath -Destination $binDir -Force
+            Write-Host "Orca CLI (Signed) installed successfully to: $($binDir)\$binexe" -ForegroundColor Green
+            $success = $true
+        } else {
+            Write-Warning "Signature verification failed for the extracted binary. Proceeding to fallback."
+            # Clean up temporary files, specifically the contents of $tempDir
+        }
+
     } catch {
-        Write-Error "Failed to download the checksum file. Please check your internet connection and ensure that the version/tag is correct."
-        return
+        Write-Warning "Attempt 1 failed (Download or Extraction/Initial Signature Check). Error: $($_.Exception.Message). Proceeding to fallback."
+    }
+    
+    # Ensure temporary files are clean before falling back, in case of partial success/failure
+    if (-not $success) {
+        Remove-Item -Path $tarballFile -Force -ErrorAction SilentlyContinue
+        # This cleans up the extracted exe and any other files
+        if (Test-Path $tempDir) {
+            Get-ChildItem -Path $tempDir -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
+        }
     }
 
-    # Use compatible hash function
-    Write-Output "Verifying SHA256 checksum..."
-    $hash = Get-FileHashCompat -Path "$($tempDir)\orca-cli_windows.zip" -Algorithm SHA256
-    Write-Output "File hash: $($hash.Hash)"
-    
-    if ((Get-Content "$($tempDir)\orca-cli_windows_checksums.txt") -match $hash.Hash) {
-        Write-Output "SHA256 verification successful"
-        Expand-Archive -Path "$($tempDir)\orca-cli_windows.zip" -DestinationPath $tempDir
-        $binexe = "orca-cli.exe"
-        Copy-Item -Path "$($tempDir)\$binexe" -Destination $binDir -Force
-        Write-Output "Orca CLI installed successfully - $($binDir)\$binexe"
-    } else {
-        Write-Error "SHA256 verification failed for $($tempDir)\orca-cli_windows.zip"
+
+    # --- ATTEMPT 2: Fallback to Checksum Verification (Original Flow) ---
+    if (-not $success) {
+        Write-Output "Attempt 2: Initiating fallback to unsigned binary and SHA256 checksum verification."
+        
+        $tarballUrlUnsigned = "https://github.com/orcasecurity/orca-cli/releases/download/$tag/orca-cli_$($tag)_windows_$($arch).zip"
+        $checksumUrl = "https://github.com/orcasecurity/orca-cli/releases/download/$tag/orca-cli_$($tag)_checksums.txt"
+        $checksumFile = "$($tempDir)\orca-cli_windows_checksums.txt"
+
+        Write-Output "Downloading binary from: $($tarballUrlUnsigned)"
+
+        try {
+            Invoke-WebRequestInsecure -Uri $tarballUrlUnsigned -OutFile $tarballFile
+            $success = $true
+        } catch {
+            Write-Error "Failed to download the binary. Please check your internet connection and ensure that the version/tag is correct."
+            $success = $false
+            # Use 'break' logic by falling through to final cleanup
+        }
+        
+        if ($success -ne $false) { # Only proceed if the download above was successful
+            try {
+                Invoke-WebRequestInsecure -Uri $checksumUrl -OutFile $checksumFile
+            } catch {
+                Write-Error "Failed to download the checksum file. Cannot verify integrity."
+                $success = $false
+                # Use 'break' logic by falling through to final cleanup
+            }
+            
+            if ($success -ne $false) {
+                # Use compatible hash function
+                Write-Output "Verifying SHA256 checksum..."
+                $hash = Get-FileHashCompat -Path $tarballFile -Algorithm SHA256
+                Write-Output "File hash: $($hash.Hash)"
+                
+                # Check if the calculated hash exists in the checksum file
+                if ((Get-Content $checksumFile) -match $hash.Hash) {
+                    # Changed Write-Output to Write-Host for correct console coloring
+                    Write-Host "SHA256 verification successful" -ForegroundColor Green
+                    
+                    # Extract and copy for the checksum flow
+                    Expand-Archive -Path $tarballFile -DestinationPath $tempDir -Force
+                    Copy-Item -Path $extractedExePath -Destination $binDir -Force
+                    
+                    # Changed Write-Output to Write-Host for correct console coloring
+                    Write-Host "Orca CLI (Checksum Verified) installed successfully to: $($binDir)\$binexe" -ForegroundColor Green
+                    $success = $true
+                } else {
+                    Write-Error "SHA256 verification FAILED for $($tarballFile). The downloaded file is corrupt or untrustworthy."
+                    $success = $false
+                }
+            }
+        }
     }
-    Remove-Item -Path $tempDir -Force -Recurse
-}
+    
+    # Final Cleanup
+    if (Test-Path $tempDir) {
+        Remove-Item -Path $tempDir -Force -Recurse -ErrorAction SilentlyContinue
+    }
+    
+    if (-not $success) {
+        Write-Error "Installation failed after both signed and checksum attempts."
+        exit 1
+    }
+} 
+
 
 # Check PowerShell version and warn if too old
 Write-Output "PowerShell Version: $($PSVersionTable.PSVersion)"
